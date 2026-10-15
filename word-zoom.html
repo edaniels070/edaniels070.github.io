@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Zoom</title>
+<style>
+:root{--bg:#fff7e6;--card:#fff;--ink:#2b2350;--muted:#7a72a0;--accent:#ff6b6b;--good:#2ecc71;--bad:#ff4757;--blue:#4d8bff;--yellow:#ffd23f;--shadow:#e6dcc3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1a33;--card:#2b2750;--ink:#fff6e0;--muted:#a9a3d6;--shadow:#12102a}}
+:root[data-theme="dark"]{--bg:#1d1a33;--card:#2b2750;--ink:#fff6e0;--muted:#a9a3d6;--shadow:#12102a}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Baloo 2","Comic Sans MS","Trebuchet MS",system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:900px;margin:0 auto;padding:16px 16px 72px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:clamp(1.6rem,5vw,2.4rem);color:var(--accent)}
+h2{margin:0;font-size:1.4rem}
+.timer{background:var(--yellow);color:#2b2350;border-radius:18px;padding:8px 18px;font-size:clamp(1.4rem,5vw,2rem);font-weight:800;min-width:130px;text-align:center;box-shadow:0 4px 0 #d9a900}
+.timer small{display:block;font-size:.7rem;font-weight:700;opacity:.7}
+.card{background:var(--card);border-radius:28px;box-shadow:0 6px 0 var(--shadow);padding:24px;margin-top:16px;text-align:center}
+.msg{font-size:1.2rem;color:var(--muted);min-height:1.6em;font-weight:700}
+.word{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:18px 0;min-height:80px}
+.l{font-size:clamp(2.4rem,11vw,4.5rem);font-weight:800;width:1.1em;border-bottom:6px solid var(--muted);transition:transform .1s}
+.l.ok{color:var(--good);border-color:var(--good);transform:scale(1.1)}
+.l.no{color:var(--bad);border-color:var(--bad)}
+.l.cur{border-color:var(--blue)}
+input{font:inherit;font-size:1.6rem;width:min(100%,360px);text-align:center;padding:12px;border-radius:18px;border:4px solid var(--blue);background:var(--bg);color:var(--ink);outline:none}
+input:disabled{opacity:.4;border-color:var(--muted)}
+input.name{font-size:1.2rem}
+button{font:inherit;font-weight:800;font-size:1.3rem;border:0;border-radius:18px;padding:12px 28px;background:var(--accent);color:#fff;box-shadow:0 5px 0 #c94b4b;cursor:pointer;margin-top:14px}
+button:active{transform:translateY(3px);box-shadow:0 2px 0 #c94b4b}
+button.alt{background:var(--blue);box-shadow:0 5px 0 #2f66c9}
+button.sm{font-size:1rem;padding:8px 16px}
+.chips,.tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0 16px}
+.chips button,.tabs button{margin:0;font-size:1rem;padding:8px 14px;background:var(--bg);color:var(--ink);box-shadow:0 3px 0 var(--shadow)}
+.chips button small{display:block;font-size:.7rem;opacity:.7;font-weight:700}
+.chips button.on,.tabs button.on{background:var(--blue);color:#fff;box-shadow:0 3px 0 #2f66c9}
+.modes{display:grid;gap:12px}
+.modes button{margin:0;text-align:left;display:flex;flex-direction:column}
+.modes button small{font-size:.85rem;font-weight:700;opacity:.9}
+.m2{background:var(--good)!important;box-shadow:0 5px 0 #1f9a52!important}
+.m3{background:#a55eea!important;box-shadow:0 5px 0 #7d3fc0!important}
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:10px}
+.s{background:var(--bg);border-radius:18px;padding:10px}
+.s b{display:block;font-size:1.4rem}
+.s span{color:var(--muted);font-weight:700;font-size:.9rem}
+.s.new{animation:pop .6s 3;background:var(--yellow);color:#2b2350}
+.s.new span{color:#2b2350}
+@keyframes pop{50%{transform:scale(1.12)}}
+.bar{height:14px;background:var(--bg);border-radius:9px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--good);width:100%}
+.lb{list-style:none;margin:0;padding:0;text-align:left}
+.lb li{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:14px;background:var(--bg);margin-top:8px;font-weight:700;font-size:1.1rem}
+.lb li.me{background:var(--yellow);color:#2b2350}
+.lb .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avs button{font-size:1.7rem;padding:4px 10px}
+.s span{display:block}
+.s button{margin-top:8px}
+.stage{position:relative;height:190px;display:flex;justify-content:center;align-items:flex-end}
+.pet{position:relative;font-size:6.5rem;line-height:1;cursor:pointer;animation:bob 2s ease-in-out infinite;transform-origin:bottom}
+.pet.jump{animation:jump .7s}
+.pi{position:absolute;line-height:1}
+.pi.hat{font-size:3rem;top:-34px;left:50%;transform:translateX(-50%) rotate(-8deg)}
+.pi.face{font-size:3.2rem;top:30%;left:50%;transform:translateX(-50%)}
+.pi.neck{font-size:2.6rem;bottom:-14px;left:50%;transform:translateX(-50%)}
+.toy{position:absolute;left:calc(50% + 70px);bottom:0;font-size:3rem;animation:wig 1.2s ease-in-out infinite}
+.heart{position:absolute;font-size:2rem;animation:up 1.2s forwards;pointer-events:none}
+@keyframes bob{50%{transform:translateY(-8px) scale(1.03)}}
+@keyframes jump{30%{transform:translateY(-50px) rotate(-6deg)}60%{transform:translateY(0) rotate(6deg)}}
+@keyframes wig{50%{transform:rotate(14deg)}}
+@keyframes up{to{transform:translateY(-70px);opacity:0}}
+.s.lock{opacity:.55}
+.toasts{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;z-index:9}
+.toasts div{background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:16px;font-weight:800}
+#pbar{display:flex;margin-bottom:8px}
+#pchip{margin:0;font-size:1.1rem;display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:30px}
+#pav{font-size:1.7rem;line-height:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal .card{max-width:480px;width:100%;margin:0;max-height:90vh;overflow:auto}
+#mute{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));margin:0;padding:8px 12px;font-size:1.2rem;border-radius:50%;z-index:10;background:var(--card);color:var(--ink);box-shadow:0 3px 0 var(--shadow)}
+.m4{background:#f39c12!important;box-shadow:0 5px 0 #b9770e!important}
+.word.sent{display:block;text-align:center;line-height:2.1}
+.sent .w{display:inline-block;white-space:nowrap;margin:0 4px}
+.sent .c{display:inline-block;font-size:clamp(1.3rem,5.5vw,2.2rem);font-weight:800;border-bottom:4px solid var(--muted);min-width:.55em;margin:0 1px}
+.sent .c.ok{color:var(--good);border-color:var(--good)}
+.sent .c.no{color:var(--bad);border-color:var(--bad)}
+.sent .c.cur{border-color:var(--blue)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div id="pbar"><button id="pchip" class="alt sm"><span id="pav"></span><span id="pnm"></span><span>✏️</span></button></div>
+
+<div id="home">
+  <div class="card" style="margin-top:0">
+    <h1 style="font-size:clamp(2.2rem,9vw,3.6rem)">⚡ Word Zoom</h1>
+    <div class="msg">Type each word as fast as you can!</div>
+    <div><button id="play">Play! 🚀</button> <button id="petBtn" class="m3">🐾 My Pet <span id="coins" style="display:inline"></span></button></div>
+  </div>
+  <div class="card">
+    <h2>🌍 Leaderboard</h2>
+    <div class="tabs" id="tabs"></div>
+    <ul class="lb" id="lb"></ul>
+  </div>
+  <div class="card">
+    <h2>🏆 My Best Scores</h2>
+    <div class="score" id="score"></div>
+    <button class="alt sm" id="reset">Reset my scores</button>
+  </div>
+</div>
+
+<div id="pet" class="hide">
+  <header><button id="petHome" class="alt sm" style="margin:0">🏠 Home</button><h1>🐾 My Pet</h1><div class="timer" id="coins2" style="min-width:0;font-size:1.3rem"></div></header>
+  <div class="card" id="adopt"><h2>Adopt a pet!</h2><div class="msg">Pick a buddy. Earn 🪙 coins by playing to give it new stuff.</div><div class="chips" id="pets"></div></div>
+  <div id="petPlay" class="hide">
+    <div class="card"><div id="stageBox"></div><input id="petName" class="name" maxlength="12" style="width:200px"><div><button id="feed" class="m2">🍎 Feed (3 🪙)</button> <button id="swap" class="alt sm">Change pet</button></div></div>
+    <div class="card"><h2>🛍️ Pet Shop</h2><div class="tabs" id="slots"></div><div class="score" id="items"></div></div>
+  </div>
+  <div class="card"><h2>🏅 Achievements</h2><div class="score" id="ach"></div></div>
+</div>
+
+<div id="menu" class="hide">
+  <header><button id="menuBack" class="alt sm" style="margin:0">🏠 Home</button><h1>Pick a game!</h1></header>
+  <div class="card">
+    <h2>Word theme</h2><div class="chips" id="themes"></div>
+    <div id="diffBox"><h2>Difficulty</h2><div class="chips" id="diffs"></div></div>
+  </div>
+  <div class="card">
+    <h2>Choose a mode</h2>
+    <div class="modes" style="margin-top:12px">
+      <button id="mClassic">🎯 Classic<small>One word at a time with 5 second breaks. Uses your difficulty and theme.</small></button>
+      <button id="mRace" class="m2">⏱️ Race the Clock<small>Type as many words as you can in 60 seconds. Uses your difficulty and theme.</small></button>
+      <button id="mDaily" class="m3">📅 Daily Challenge<small>Same 5 words for everyone today. Fastest total time wins!</small></button>
+      <button id="mSent" class="m4">💬 Sentences<small>Type whole sentences and see your words per minute.</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="game" class="hide">
+  <header>
+    <button id="back" class="alt sm" style="margin:0">🏠 Home</button>
+    <div class="timer"><small id="tl">TIME</small><span id="t">0.0</span>s</div>
+  </header>
+  <div class="card">
+    <div class="msg" id="label" style="font-size:1rem"></div>
+    <div class="msg" id="msg"></div>
+    <div class="word" id="word"></div>
+    <input id="inp" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type here..." disabled>
+    <div class="bar hide" id="barWrap"><i id="bar"></i></div>
+    <div class="msg" id="count" style="margin-top:10px"></div>
+    <button id="skip" class="alt hide">I'm ready! ▶</button>
+    <div id="res" class="hide">
+      <div class="msg" id="resTxt" style="color:var(--ink);font-size:1.5rem"></div>
+      <button id="again">Play again 🔁</button> <button id="toMenu" class="alt">Pick mode 🎮</button>
+    </div>
+  </div>
+  <div class="card"><h2>🏆 My Best Scores</h2><div class="score" id="score2"></div></div>
+</div>
+
+</div>
+<div id="pmodal" class="modal hide"><div class="card">
+  <h2>👤 My Profile</h2>
+  <p style="margin:12px 0 6px;font-weight:700">Your picture</p><div class="chips avs" id="avs"></div>
+  <p style="margin:6px 0;font-weight:700">Your name</p><input id="name" class="name" maxlength="14" placeholder="Your name" autocomplete="off">
+  <div class="msg" id="ppet" style="margin-top:14px"></div>
+  <div class="msg" id="pstats" style="font-size:1rem"></div>
+  <button id="pdone">Done ✅</button>
+</div></div>
+<button id="mute" aria-label="Sound on or off">🔊</button>
+<div id="toasts" class="toasts"></div>
+<script>
+const T={
+Animals:"cat dog pig fox bat cow hen ant bear frog duck lion seal wolf tiger zebra horse sheep snake mouse rabbit monkey turtle donkey penguin giraffe dolphin panda koala elephant buffalo squirrel",
+Sports:"run bat net golf kick ball goal team swim score coach pitch swing soccer hockey karate tennis boxing diving cycling surfing baseball football swimming gymnast",
+Food:"pie jam egg bun ham nut cake corn rice milk soup apple pizza bread candy lemon grape banana cheese cookie carrot cereal cookies noodles waffles popcorn pancake sandwich hamburger spaghetti",
+Space:"sun sky mars moon star comet earth orbit alien venus planet rocket galaxy saturn meteor shuttle gravity eclipse neptune jupiter asteroid universe starship",
+Mixed:"hat bus cup bug map toy red fun box jump blue kite play cloud happy smile snake robot water dance candy beach purple dragon pencil school window flower yellow garden rainbow balloon unicorn pumpkin cricket sunshine airplane birthday umbrella dinosaur treasure"};
+T.Animals+=" ape owl rat cub elk yak emu ram doe hog lamb deer goat crab moth bee otter camel eagle shark whale llama moose gecko skunk sloth parrot beaver lizard turkey ferret walrus gorilla leopard hamster raccoon cheetah ostrich panther jaguar";
+T.Sports+=" ski row polo race dive sail kayak medal rugby track relay bowling archery fencing skiing wrestle javelin trophy helmet marathon referee stadium champion athlete softball";
+T.Food+=" fig oat pea taco plum pear lime kiwi beef fish bean mango peach melon berry toast pasta salad honey onion butter cherry orange potato tomato muffin yogurt pretzel spinach broccoli pudding cupcake burrito lettuce";
+T.Space+=" ufo rover probe space pluto cosmos lunar solar launch crater nebula blastoff stardust";
+Object.assign(T,{
+Ocean:"sea fin eel ray wave tide reef crab fish seal shark whale coral squid shell clam anchor pirate island ship turtle walrus sailor lobster dolphin octopus mermaid seaweed seahorse starfish plankton",
+Nature:"sun leaf log mud tree rain wind seed rock lake pond moss grass cloud river stone beach plant flower cliff storm cactus hills forest meadow valley desert jungle canyon volcano blossom thunder rainbow mountain sunshine",
+Dinosaurs:"rex egg bone fang claw tail roar nest horn giant dino jaw fossil raptor spikes swamp teeth scales museum feather reptile fossils extinct jurassic triassic predator dinosaur",
+School:"pen bag bus art book desk math test read class pencil paper ruler chalk teach recess lunch eraser lesson grade reading writing spelling science teacher student crayons library scissors backpack notebook homework history",
+Music:"sing song drum bass beat note band tune bell horn harp flute piano organ chord rhythm guitar violin cello trumpet singer melody whistle concert trombone clarinet harmony lyrics dancer record tempo rock jazz pop choir",
+Home:"bed rug cup mug fan lamp door sofa desk sink oven bath chair table clock couch stove shelf closet attic carpet basket pantry kettle window kitchen garage mirror pillow blanket curtain fridge toaster bathtub chimney doorbell bookcase",
+Body:"arm leg toe eye ear lip hand foot head nose knee chin hair back elbow thumb teeth heart brain wrist cheek palm skin bones lungs finger ankle tongue fingers shoulder stomach muscles eyebrow forehead knuckle",
+Clothes:"hat cap tie bib coat sock shoe belt boot vest skirt scarf shirt pants dress jeans mitten gloves sandal jacket hoodie sweater pajamas sneaker costume uniform raincoat slippers necklace bracelet",
+Jobs:"vet cook chef pilot nurse actor baker doctor farmer artist singer driver clown teacher dentist painter plumber builder fireman lawyer police author janitor captain engineer mechanic musician",
+Transport:"car bus van cab jet bike boat ship taxi tram train plane truck rocket ferry subway wagon sled cart canoe kayak scooter tractor trolley bicycle gondola tugboat airplane sailboat monorail tricycle",
+Weather:"sun fog ice hot rain snow wind cold warm hail mist storm cloud sunny windy rainy foggy flood frost breeze cloudy stormy tornado thunder drizzle blizzard rainbow sunshine freezing snowfall monsoon weather",
+Fantasy:"elf orc imp wand king magic spell fairy dragon witch giant ogre wizard castle potion knight goblin dwarf quest crown sword troll genie unicorn mermaid monster phoenix magical kingdom treasure princess sorcerer",
+Colors:"red tan blue pink gray gold teal navy lime rose green black white brown peach coral amber ivory orange purple yellow silver indigo maroon violet crimson scarlet magenta emerald lavender charcoal burgundy",
+Holidays:"elf gift snow tree star bell card toys candy cake party lights ghost witch bunny turkey sleigh present costume candles holiday snowman pumpkin balloons birthday festival stocking ornament reindeer parade",
+Games:"tag game dice card chess ball kite hide seek level score slide teddy swings puzzle blocks bounce jigsaw arcade winner trophy marbles pinball tickets bubbles cartoon checkers joystick"
+});
+const MORE={
+Animals:"dingo hare mole mule newt pony toad wasp worm bison coyote crane crow dove finch fly hawk hippo koi lynx macaw mink puffin quail raven robin rhino shrew snail stork swan tapir trout vole wombat badger bobcat condor falcon gibbon iguana jackal kitten lemur magpie osprey oyster pigeon python rooster salmon spider toucan weasel gopher heron hornet ladybug seagull antelope flamingo hedgehog kangaroo mongoose platypus scorpion tortoise chipmunk cockatoo",
+Sports:"bike pass shot dunk dash luge climb catch throw serve field court rink pool lane glove sprint punch tackle bunt rowing sailing racing jogging hiking curling cricket netball lacrosse gymnast wrestler pitcher batter goalie striker runner forward defense",
+Food:"ham yam rye tea chip dip roll stew tofu naan beet olive cream bacon bagel donut garlic ginger lentil noodle pepper pickle radish ravioli sausage waffle avocado brownie cabbage chicken lasagna raisins cucumber tortilla pancakes crackers peanut walnut",
+Space:"dark void nova flare moons comets uranus mercury capsule mission station landing liftoff voyager spaceman orbiter nebulae quasar pulsar photon cosmic lander radar beam glow ray dust light stars dwarf giant",
+Ocean:"cod gulf bay surf foam salt kelp dive swim boat raft tuna orca bass pearl shore sandy sails ocean waves pelican penguin oyster mussel marlin sponge diver harbor lagoon current tidal boats ships snorkel manatee barnacle sandbar porpoise crayfish",
+Nature:"ant bud dew fog fern hay ivy oak pine sand soil twig vine hill wood bush cave dune stream trail brook branch breeze daisy clover acorn berry mushroom pebble tulip rose petal bloom marsh prairie sunrise sunset woodland wildlife sunlight daylight seasons",
+Dinosaurs:"herd tusks spike beast scale plate crest tooth bones eggs hatch dig digs ancient fierce mighty stomp stomped claws tracks ferns skeleton skull growl prey hunter swimmer digger nesting lizard dinos",
+School:"gym map pad note quiz page glue tape pens clay club bell learn study board crayon marker folder alphabet addition textbook computer calendar painting drawing subject numbers letters teachers recorder stapler markers pencils binder locker desks",
+Music:"rap folk solo duet banjo chime lyric scale sound radio voice claps ukulele keyboard drummer triangle maracas cymbals bagpipe musical singing playing chorus pianist stage mic amp strum pluck tap hum encore",
+Home:"mat lid jar pot pan tub key wall roof room yard fence floor stair porch patio blind bench drawer hallway doorway balcony cabinet mailbox cushion blender freezer dresser ceiling faucet teapot plates forks spoon knife bowls towel soap broom mop stool sidewalk backyard bathroom",
+Body:"hip rib jaw gum neck vein bone nail shin heel waist chest tummy belly throat temple pinky calf spine joint breath pulse senses hearing smell taste touch sight freckle dimple eyelid muscle tooth gums eyelash toenail",
+Clothes:"shorts tights jersey beanie apron cape robe gown mask ring watch purse wallet zipper button pocket collar sleeve buckle helmet overalls earmuffs sunhat bowtie swimsuit leggings trunks",
+Jobs:"barber waiter tailor writer soldier surgeon cashier dancer florist gardener reporter director inventor magician diver guard judge coach maid mayor ranger banker butcher designer explorer mailman cowboy fisher potter welder miner hunter editor",
+Transport:"raft yacht barge metro limo jeep trailer minivan pickup wheel tire road rail track tunnel bridge garage engine pedal brakes seatbelt highway airport station railway cruiser tanker skates segway glider balloon blimp chopper freight convoy carriage caboose",
+Weather:"chilly humid muggy dry damp icy gust gusty shower puddle umbrella raindrop snowball sleet season winter summer spring autumn heat cool forecast climate cyclone twister clear clouds flurry overcast raining snowing sunlight wintry",
+Fantasy:"queen prince royal cloak charm curse ghost elves hero cave tower moat shield dungeon wizards gnome pixie sprite mythic legend myth beast dragons griffin centaur mystic portal enchant spells scroll armor banner knights palace throne jewel riddle wishes magician",
+Colors:"beige cyan mint plum ruby aqua jade rust sand sky cream khaki olive lilac mauve azure bronze copper salmon orchid mustard chestnut fuchsia cobalt ebony pastel neon bright vivid tint shade dye paint rainbow",
+Holidays:"eggs hunt feast pie mask treat trick bats spooky cheer carol angel santa snowy wreath cocoa mitten tinsel glitter gifts wrap bow ribbon cookies pilgrim harvest thanks lantern sparkler confetti streamer pinata banner guests dinner turkeys family friends fun",
+Games:"bingo rope yoyo token board cards domino spinner hoop frisbee swing seesaw tunnel maze riddle quiz round turn win lose team play player players console gaming coins bonus prize points lives magic treasure quest puzzles kickball leapfrog playtime sandbox slides"};
+for(const k in MORE)T[k]+=" "+MORE[k];
+for(const k in T)T[k]=[...new Set(T[k].split(" "))].filter(w=>/^[a-z]{3,8}$/.test(w)).join(" ");
+const ALLW=[...new Set(Object.values(T).join(" ").split(" "))];
+const DIFFS=[["easy","🌱 Easy","3-4 letters",3,4],["medium","🌿 Medium","5-6 letters",5,6],["hard","🌳 Hard","7-8 letters",7,8],["all","🌈 All","3-8 letters",3,8]];
+const THEMES=[["Mixed","🎲 Mixed"],["Animals","🐼 Animals"],["Sports","⚽ Sports"],["Food","🍕 Food"],["Space","🚀 Space"],["Ocean","🐠 Ocean"],["Nature","🌳 Nature"],["Dinosaurs","🦖 Dinosaurs"],["School","🎒 School"],["Music","🎵 Music"],["Home","🏠 Home"],["Body","🖐️ Body"],["Clothes","👕 Clothes"],["Jobs","👩‍🚒 Jobs"],["Transport","🚌 Transport"],["Weather","⛈️ Weather"],["Fantasy","🧙 Fantasy"],["Colors","🎨 Colors"],["Holidays","🎄 Holidays"],["Games","🧩 Games"]];
+const SENT=["the cat sat on the mat","i like to eat pizza","the sun is bright today","my dog loves to play fetch","we can go to the park","the purple dragon ate pizza","a big frog jumped in the pond","i see a rainbow in the sky","birds sing in the morning","the robot said hello to me","my friend has a red kite","we built a tall sand castle","the little fish swims fast","it is fun to read books","the moon glows at night","a happy bunny hops away","i can type very fast","the monkey ate a yellow banana","snow falls on the quiet hill","the penguin slid on the ice","we saw a giant dinosaur","my cat likes to nap all day","the rocket flew to the stars","she painted a pretty flower","he kicked the ball into the goal","the dolphin jumped over the wave","we eat cookies after dinner","the wizard waved his magic wand","a tiny ant carried a leaf","the school bus is yellow","i love to dance and sing","the unicorn runs through the forest","my teddy bear is very soft","a bee buzzed around the garden","they played games all afternoon","the pirate found a treasure chest","i packed my backpack for school","the pancakes were warm and tasty","our team won the big game","a friendly ghost waved at us"];
+SENT.push(...`the bunny hopped over the log|i will build a snowman today|my little sister likes to draw|the bear found a jar of honey|we planted seeds in the garden|the fire truck went down the street|a turtle walked slowly to the pond|i brushed my teeth before bed|the clown made everyone laugh|we went swimming at the lake|grandma baked a warm apple pie|the astronaut floated in space|my favorite color is bright blue|the owl hooted in the tall tree|she rode her bike to school|the baby giraffe took a nap|we watched the fireworks at night|dad made pancakes for breakfast|the puppy chased his own tail|i found a shiny shell on the beach|the farmer fed the hungry cows|a gentle breeze moved the leaves|our class planted a tiny tree|the mermaid sang a beautiful song|he wore a silly hat to the party|the train whistled as it left|i drew a picture of my family|the ducks swam across the pond|mom read me a bedtime story|the lion roared at the moon|we looked for shapes in the clouds|the knight rode a white horse|my brother kicked the soccer ball|the squirrel hid nuts for winter|a ladybug landed on my hand|we made cards for our friends|the sleepy kitten curled up in a ball|i can count to one hundred|the garden is full of colorful flowers|the dinosaur stomped through the swamp|she blew bubbles in the backyard|we sang songs on the bus|the cookies smell so good|the spaceship landed on a red planet|my uncle taught me to fish|the raindrops tapped on my window|the fox ran quickly through the woods|i love jumping in puddles|the teacher gave us a gold star|we roasted marshmallows by the fire|the elephant sprayed water with its trunk|a rainbow appeared after the rain|the drummer played a fast beat|my pet fish swims in circles|the princess lived in a tall tower|we ate popcorn at the movies|the kite danced high in the wind|i helped wash the dishes tonight|the zebra has black and white stripes|the whale splashed in the deep sea|i wrote a letter to my friend|the dragon guarded a pile of gold|we built a fort out of pillows|the busy bees made sweet honey|my grandpa tells funny stories|the penguins huddled together to stay warm|i learned a new word today|the monkey swung from branch to branch|she wore a red scarf and gloves|the pizza was hot and cheesy|the stars twinkled in the dark sky|we raced our toy cars down the hall|the wizard cast a sparkly spell|my dog waits for me at the door|the crab walked sideways on the sand|i packed a lunch for the picnic|the frog jumped onto a lily pad|our team practiced every single day|the snowflakes fell softly on the ground|he found a hidden cave in the hills|the pirates sailed across the sea|i fed the ducks some bread|the magician pulled a rabbit from a hat|we danced to our favorite song|the cheetah is the fastest animal|a tiny seed grew into a tall sunflower|the school library has so many books|my robot can walk and talk|the butterfly rested on a flower|we made a wish on a shooting star|the horse galloped across the field|she built a castle out of blocks|the ice cream melted in the sun|i like to splash in the pool|the owl watched from the old oak tree|the band played music in the park|we took a long walk after lunch|the dolphins jumped through the waves|my teddy bear goes everywhere with me|the mouse found a piece of cheese|the sun rises in the east every morning|our neighbors have a friendly dog|i made a paper airplane at recess|the volcano rumbled and puffed smoke|the kitten pounced on a ball of yarn|we picked apples from the orchard|the pilot flew the plane above the clouds|she solved the puzzle all by herself|the bunny munched on a crunchy carrot|we cheered when our team scored`.split("|"));
+{const u=[...new Set(SENT)].filter(x=>/^[a-z]+( [a-z]+)*$/.test(x));SENT.length=0;SENT.push(...u)}
+const LENS=[3,4,5,6,7,8],RACE=60,DAILY=5;
+const $=id=>document.getElementById(id);
+let best={},sel={diff:"all",theme:"Mixed"},mode="classic",state="idle",cur="",lastWord="",wordStart=0,tick=null,pt=null,rt=null;
+let score=0,total=0,idx=0,dq=[],raceStart=0,newKey=null,db=null,uid=null,all=[],tab="3";
+try{best=JSON.parse(localStorage.getItem("wordzoom")||"{}")}catch(e){}
+try{$("name").value=localStorage.getItem("wordzoomName")||""}catch(e){}
+const save=()=>{try{localStorage.setItem("wordzoom",JSON.stringify(best))}catch(e){}};
+const getName=()=>($("name").value.trim()||"Player").slice(0,14);
+const today=()=>new Date().toLocaleDateString("en-CA");
+function show(v){["home","menu","game","pet"].forEach(x=>$(x).classList.toggle("hide",x!==v));$("pbar").classList.toggle("hide",v==="game")}
+
+/* ----- words ----- */
+function pool(){
+  const d=sel.theme==="Mixed"?DIFFS.find(x=>x[0]===sel.diff):DIFFS[3];
+  const w=(sel.theme==="Mixed"?ALLW:T[sel.theme].split(" "));
+  const f=w.filter(x=>x.length>=d[3]&&x.length<=d[4]);
+  return f.length>=4?f:w;
+}
+function seeded(seed){let a=[...seed].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7);return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function dailyWords(){const r=seeded("wz"+today()),p=[...ALLW],o=[];while(o.length<DAILY)o.push(p.splice(Math.floor(r()*p.length),1)[0]);return o}
+
+/* ----- sounds ----- */
+let AC=null,muted=false;
+try{muted=localStorage.getItem("wordzoomMute")==="1"}catch(e){}
+function tone(f,t,d,type,v){const o=AC.createOscillator(),g=AC.createGain();o.type=type||"sine";o.frequency.value=f;
+  const st=AC.currentTime+t;g.gain.setValueAtTime(0.0001,st);g.gain.exponentialRampToValueAtTime(v||.1,st+.015);g.gain.exponentialRampToValueAtTime(0.0001,st+d);
+  o.connect(g);g.connect(AC.destination);o.start(st);o.stop(st+d+.02)}
+const SFX={click:[[620,0,.07,"triangle",.07],[820,.04,.07,"triangle",.05]],
+ done:[[523,0,.14],[659,.1,.14],[784,.2,.22]],
+ blip:[[880,0,.1,"triangle",.09],[1175,.07,.1,"triangle",.07]],
+ record:[[523,0,.14],[659,.1,.14],[784,.2,.14],[1047,.3,.14],[1319,.4,.35]],
+ ach:[[988,0,.1,"triangle"],[1319,.09,.1,"triangle"],[1568,.18,.25,"triangle"]],
+ end:[[784,0,.18],[659,.16,.18],[523,.32,.3]]};
+function sfx(k,delay){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();
+  SFX[k].forEach(n=>tone(n[0],n[1]+(delay||0),n[2],n[3],n[4]))}catch(e){}}
+document.addEventListener("click",e=>{if(e.target.closest("button"))sfx("click")});
+$("mute").textContent=muted?"🔇":"🔊";
+$("mute").onclick=()=>{muted=!muted;try{localStorage.setItem("wordzoomMute",muted?"1":"0")}catch(e){}$("mute").textContent=muted?"🔇":"🔊"};
+
+/* ----- profile & pet ----- */
+const AVATARS=["🐼","🦊","🐸","🐙","🦄","🐯","🐵","🐧","🦖","🐱","🐶","🤖"];
+const PETS=[["🐶","Puppy"],["🐱","Kitten"],["🐰","Bunny"],["🐲","Dragon"],["🐼","Panda"],["🦊","Fox"],["🐥","Chick"],["🦄","Unicorn"]];
+const ITEMS={cap:["hat","🧢","Cap",15],tophat:["hat","🎩","Top Hat",25],grad:["hat","🎓","Grad Cap",30],crown:["hat","👑","Crown",0],
+glasses:["face","👓","Glasses",20],shades:["face","🕶️","Cool Shades",0],
+scarf:["neck","🧣","Scarf",20],bowtie:["neck","🎀","Bow",15],
+ball:["toy","⚽","Ball",10],balloon:["toy","🎈","Balloon",15],kite:["toy","🪁","Kite",20],guitar:["toy","🎸","Guitar",30],rocket:["toy","🚀","Rocket",0]};
+const SLOTS=[["hat","🎩 Hats"],["face","👓 Face"],["neck","🧣 Neck"],["toy","🎈 Toys"]];
+const ACH=[
+["first","🌱","First Word","Type your first word",()=>P.stats.words>=1,10],
+["w25","📝","Word Wizard","Type 25 words",()=>P.stats.words>=25,20],
+["w100","🏅","Typing Pro","Type 100 words",()=>P.stats.words>=100,50,"crown"],
+["fast","⚡","Lightning","Type a 4+ letter word in under 2 seconds",()=>P.stats.fast,25,"shades"],
+["rec","🌟","Record Breaker","Set your first record",()=>P.stats.records>=1,15],
+["r10","⏱️","Racer","Type 10 words in Race the Clock",()=>(best.race||0)>=10,30],
+["r20","🏎️","Speed Demon","Type 20 words in Race the Clock",()=>(best.race||0)>=20,60,"rocket"],
+["daily","📅","Daily Hero","Finish a Daily Challenge",()=>P.stats.daily,30],
+["str3","🔥","On Fire","Play 3 days in a row",()=>P.stats.streak>=3,40],
+["themes","🎨","Explorer","Play 5 different themes",()=>Object.keys(P.stats.themes).length>=5,30],
+["shop","🛍️","Shopper","Buy 3 items for your pet",()=>P.stats.bought>=3,20],
+["sent10","💬","Chatterbox","Type 10 sentences",()=>P.stats.sent>=10,30]];
+const defP=()=>({avatar:"🐼",coins:0,pet:null,petName:"",owned:[],eq:{},ach:[],stats:{words:0,themes:{},days:[],streak:0,records:0,bought:0,fast:0,daily:0,sent:0}});
+let P=defP(),hasLocal=false,shopSlot="hat";
+try{const x=localStorage.getItem("wordzoomProf");if(x){P=Object.assign(defP(),JSON.parse(x));hasLocal=true}}catch(e){}
+P.stats=Object.assign(defP().stats,P.stats);
+const saveP=()=>{hasLocal=true;try{localStorage.setItem("wordzoomProf",JSON.stringify(P))}catch(e){}};
+function toast(t){const d=document.createElement("div");d.textContent=t;$("toasts").append(d);setTimeout(()=>d.remove(),4000)}
+function markDay(){const d=today(),s=P.stats;if(s.days[s.days.length-1]!==d)s.days=s.days.concat(d).slice(-30);
+  let n=0,dt=new Date();while(s.days.includes(dt.toLocaleDateString("en-CA"))){n++;dt.setDate(dt.getDate()-1)}s.streak=n;saveP()}
+function checkAch(){ACH.forEach(a=>{if(!P.ach.includes(a[0])&&a[4]()){P.ach.push(a[0]);P.coins+=a[5];
+  if(a[6]&&!P.owned.includes(a[6]))P.owned.push(a[6]);
+  sfx("ach",.4);toast(`🏅 ${a[2]}! +${a[5]} 🪙`+(a[6]?` and a new ${ITEMS[a[6]][2]}!`:""))}})}
+function addCoins(n){P.coins+=n;checkAch();saveP();renderCoins()}
+function renderCoins(){$("coins").textContent="🪙 "+P.coins;$("coins2").textContent="🪙 "+P.coins;if($("pstats").textContent)renderChip()}
+function renderProf(){
+  $("avs").innerHTML=AVATARS.map(a=>`<button data-a="${a}" class="${P.avatar===a?"on":""}">${a}</button>`).join("");
+  $("avs").querySelectorAll("button").forEach(b=>b.onclick=()=>{P.avatar=b.dataset.a;saveP();renderProf();pushScore();renderLB()});
+  renderCoins();renderChip();
+}
+function renderChip(){
+  $("pav").textContent=P.avatar;$("pnm").textContent=getName();
+  $("ppet").textContent=P.pet?`${P.pet} ${P.petName||"Your pet"}`:"🐾 No pet yet";
+  $("pstats").textContent=`🪙 ${P.coins} coins · 🏅 ${P.ach.length}/${ACH.length} achievements · ⌨️ ${P.stats.words} words · 🔥 ${P.stats.streak} day streak`;
+}
+function openProf(){renderProf();$("pmodal").classList.remove("hide")}
+function closeProf(){$("pmodal").classList.add("hide");pushScore();renderLB()}
+function petHTML(){
+  const g=s=>P.eq[s]&&ITEMS[P.eq[s]]?`<span class="pi ${s}">${ITEMS[P.eq[s]][1]}</span>`:"";
+  const toy=P.eq.toy&&ITEMS[P.eq.toy]?`<span class="toy">${ITEMS[P.eq.toy][1]}</span>`:"";
+  return `<div class="stage"><div class="pet" id="petBody">${P.pet}${g("hat")}${g("face")}${g("neck")}</div>${toy}</div>`;
+}
+function jumpPet(h){const p=$("petBody");if(!p)return;p.classList.remove("jump");void p.offsetWidth;p.classList.add("jump");
+  if(h)for(let i=0;i<3;i++){const x=document.createElement("span");x.className="heart";x.textContent="❤️";x.style.left=(30+i*20)+"%";x.style.top="0";
+    $("stageBox").firstChild.append(x);setTimeout(()=>x.remove(),1200)}}
+function renderShop(){
+  $("slots").innerHTML=SLOTS.map(x=>`<button data-s="${x[0]}" class="${shopSlot===x[0]?"on":""}">${x[1]}</button>`).join("");
+  $("slots").querySelectorAll("button").forEach(b=>b.onclick=()=>{shopSlot=b.dataset.s;renderShop()});
+  $("items").innerHTML=Object.entries(ITEMS).filter(([k,v])=>v[0]===shopSlot).map(([k,v])=>{
+    const own=P.owned.includes(k),on=P.eq[shopSlot]===k;
+    const btn=own?`<button class="sm ${on?"":"alt"}" data-act="eq" data-k="${k}">${on?"Take off":"Wear it!"}</button>`
+      :v[3]?`<button class="sm m2" data-act="buy" data-k="${k}">Buy ${v[3]} 🪙</button>`
+      :`<span style="font-size:.8rem">🏅 Unlock with an achievement</span>`;
+    return `<div class="s"><span style="font-size:2.4rem">${v[1]}</span><span>${v[2]}</span>${btn}</div>`}).join("");
+  $("items").querySelectorAll("button[data-act]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k,v=ITEMS[k];
+    if(b.dataset.act==="buy"){
+      if(P.coins<v[3]){toast("Not enough coins yet! Keep playing 🪙");return}
+      P.coins-=v[3];P.owned.push(k);P.stats.bought++;P.eq[v[0]]=k;checkAch();
+    }else P.eq[v[0]]=P.eq[v[0]]===k?null:k;
+    saveP();pushScore();renderPet();
+  });
+}
+function renderPet(){
+  renderCoins();
+  if(!P.pet){
+    $("adopt").classList.remove("hide");$("petPlay").classList.add("hide");
+    $("pets").innerHTML=PETS.map(x=>`<button data-p="${x[0]}"><span style="font-size:2.2rem;display:block">${x[0]}</span><small>${x[1]}</small></button>`).join("");
+    $("pets").querySelectorAll("button").forEach(b=>b.onclick=()=>{P.pet=b.dataset.p;if(!P.petName)P.petName=PETS.find(x=>x[0]===P.pet)[1];saveP();pushScore();renderPet()});
+  }else{
+    $("adopt").classList.add("hide");$("petPlay").classList.remove("hide");
+    $("stageBox").innerHTML=petHTML();$("petName").value=P.petName;renderShop();
+  }
+  $("ach").innerHTML=ACH.map(a=>{const d=P.ach.includes(a[0]);
+    return `<div class="s ${d?"":"lock"}"><span style="font-size:2rem">${a[1]}</span><b style="font-size:1rem">${a[2]}</b><span style="font-size:.8rem">${a[3]}</span><span style="font-size:.85rem">${d?"✅ Done!":"+"+a[5]+" 🪙"+(a[6]?" + "+ITEMS[a[6]][1]:"")}</span></div>`}).join("");
+}
+
+/* ----- scoreboard ----- */
+function tiles(){
+  const d=best.daily&&best.daily.d===today()?best.daily.t.toFixed(2)+"s":"—";
+  const t=LENS.map(n=>[String(n),n+" letters",best[n]!=null?best[n].toFixed(2)+"s":"—"]);
+  t.push(["race","⏱️ Race",best.race!=null?best.race+" words":"—"],["daily","📅 Today",d],["wpm","💬 Sentences",best.wpm!=null?best.wpm+" wpm":"—"]);
+  const h=t.map(x=>`<div class="s ${newKey===x[0]?"new":""}"><span>${x[1]}</span><b>${x[2]}</b></div>`).join("");
+  $("score").innerHTML=h;$("score2").innerHTML=h;
+}
+function renderTabs(){
+  const t=LENS.map(n=>[String(n),n+" letters"]).concat([["race","⏱️ Race"],["daily","📅 Daily"],["wpm","💬 Sentences"]]);
+  $("tabs").innerHTML=t.map(x=>`<button data-k="${x[0]}" class="${x[0]===tab?"on":""}">${x[1]}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;renderTabs();renderLB()});
+}
+function renderLB(){
+  const ul=$("lb");ul.innerHTML="";
+  const msg=m=>{ul.innerHTML=`<li><span>${m}</span></li>`};
+  if(!db)return msg("Leaderboard is not available right now.");
+  let rows,fmt;
+  if(tab==="race"){rows=all.filter(r=>r.best&&r.best.race!=null).sort((a,b)=>b.best.race-a.best.race);fmt=r=>r.best.race+" words"}
+  else if(tab==="wpm"){rows=all.filter(r=>r.best&&r.best.wpm!=null).sort((a,b)=>b.best.wpm-a.best.wpm);fmt=r=>r.best.wpm+" words/min"}
+  else if(tab==="daily"){rows=all.filter(r=>r.best&&r.best.daily&&r.best.daily.d===today()).sort((a,b)=>a.best.daily.t-b.best.daily.t);fmt=r=>r.best.daily.t.toFixed(2)+"s"}
+  else{rows=all.filter(r=>r.best&&r.best[tab]!=null).sort((a,b)=>a.best[tab]-b.best[tab]);fmt=r=>r.best[tab].toFixed(2)+"s"}
+  rows=rows.slice(0,10);
+  if(!rows.length)return msg("No scores yet. Be the first! 🎉");
+  rows.forEach((r,i)=>{
+    const li=document.createElement("li");if(r.id===uid)li.className="me";
+    const a=document.createElement("span");a.className="n";a.textContent=(["🥇","🥈","🥉"][i]||(i+1)+".")+" "+(AVATARS.includes(r.avatar)?r.avatar+" ":"")+(r.name||"Player");
+    const b=document.createElement("span");b.textContent=fmt(r);
+    li.append(a,b);ul.append(li);
+  });
+}
+async function pushScore(){if(!db||!uid)return;try{await db.doc("scores/"+uid).set({name:getName(),best,avatar:P.avatar,prof:P})}catch(e){}}
+async function initDb(){
+  try{
+    const user=await claude.use("user");db=await claude.use("db");
+    if(!db||!user){db=null;renderLB();return}
+    uid=await user.id();
+    db.collection("scores").onSnapshot(s=>{all=s.docs.map(d=>({id:d.id,...d.data()}));renderLB()},()=>{});
+    const m=await db.doc("scores/"+uid).get();
+    if(m.exists){
+      const pd=(m.data()||{}).prof;if(pd&&!hasLocal){P=Object.assign(defP(),pd);P.stats=Object.assign(defP().stats,P.stats);saveP();renderProf()}
+      const b=(m.data()||{}).best||{};let ch=false;
+      for(const k in b){
+        if(k==="race"||k==="wpm"){if(best[k]==null||b[k]>best[k]){best[k]=b[k];ch=true}}
+        else if(k==="daily"){const o=best.daily;if(!o||b.daily.d>o.d||(b.daily.d===o.d&&b.daily.t<o.t)){best.daily=b.daily;ch=true}}
+        else if(best[k]==null||b[k]<best[k]){best[k]=b[k];ch=true}
+      }
+      if(ch){save();tiles()}
+    }
+    if(Object.keys(best).length)pushScore();
+  }catch(e){db=null;renderLB()}
+}
+
+/* ----- menu ----- */
+function buildMenu(){
+  $("diffBox").classList.toggle("hide",sel.theme!=="Mixed");
+  $("diffs").innerHTML=DIFFS.map(d=>`<button data-v="${d[0]}" class="${sel.diff===d[0]?"on":""}">${d[1]}<small>${d[2]}</small></button>`).join("");
+  $("themes").innerHTML=THEMES.map(d=>`<button data-v="${d[0]}" class="${sel.theme===d[0]?"on":""}">${d[1]}</button>`).join("");
+  $("diffs").querySelectorAll("button").forEach(b=>b.onclick=()=>{sel.diff=b.dataset.v;buildMenu()});
+  $("themes").querySelectorAll("button").forEach(b=>b.onclick=()=>{sel.theme=b.dataset.v;buildMenu()});
+}
+
+/* ----- game ----- */
+function renderSent(typed){
+  let off=0;
+  const cl=k=>k<typed.length?(typed[k]===cur[k]?"ok":"no"):(k===typed.length&&state==="play"?"cur":"");
+  $("word").innerHTML=cur.split(" ").map((w,wi,a)=>{
+    let h=[...w].map((c,i)=>`<span class="c ${cl(off+i)}">${c}</span>`).join("");
+    if(wi<a.length-1)h+=`<span class="c ${cl(off+w.length)}">&nbsp;</span>`;
+    off+=w.length+1;return `<span class="w">${h}</span>`}).join("");
+}
+function renderWord(typed=""){
+  $("word").className=mode==="sentence"?"word sent":"word";
+  if(mode==="sentence")return renderSent(typed);
+  $("word").innerHTML=[...cur].map((c,i)=>{let k="l";
+    if(i<typed.length)k+=typed[i]===c?" ok":" no";else if(i===typed.length&&state==="play")k+=" cur";
+    return `<div class="${k}">${c}</div>`}).join("");
+}
+function stopAll(){clearInterval(tick);clearInterval(pt);clearInterval(rt)}
+function startMode(m){markDay();
+  stopAll();mode=m;newKey=null;score=0;total=0;idx=0;lastWord="";
+  const dn=sel.theme==="Mixed"?DIFFS.find(x=>x[0]===sel.diff)[1]:"All words",tn=THEMES.find(x=>x[0]===sel.theme)[1];
+  $("label").textContent=m==="sentence"?"💬 Sentences · type the whole sentence!":m==="daily"?"📅 Daily Challenge · Word 1 of "+DAILY:m==="race"?`⏱️ Race the Clock · ${dn} · ${tn}`:`🎯 Classic · ${dn} · ${tn}`;
+  $("tl").textContent=m==="race"?"TIME LEFT":m==="daily"?"TOTAL":"TIME";
+  $("inp").style.width=m==="sentence"?"min(100%,560px)":"";$("res").classList.add("hide");$("t").textContent=m==="race"?RACE:"0.0";
+  if(m==="daily")dq=dailyWords();
+  show("game");tiles();
+  if(m==="race"){
+    raceStart=performance.now();
+    rt=setInterval(()=>{const left=RACE-(performance.now()-raceStart)/1000;
+      if(left<=0)endRace();else $("t").textContent=left.toFixed(1)},100);
+  }
+  nextWord();
+}
+function nextWord(){
+  if(mode==="daily")cur=dq[idx];else if(mode==="sentence"){let w;do{w=SENT[Math.floor(Math.random()*SENT.length)]}while(w===lastWord);cur=lastWord=w}
+  else{const p=pool();let w;do{w=p[Math.floor(Math.random()*p.length)]}while(w===lastWord&&p.length>1);cur=lastWord=w}
+  state="play";
+  if(mode==="classic")newKey=null;
+  $("msg").textContent=mode==="race"?`Words so far: ${score}`:"Go go go! 🏃";
+  $("barWrap").classList.add("hide");$("skip").classList.add("hide");$("count").textContent="";
+  $("inp").disabled=false;$("inp").value="";$("inp").focus();
+  renderWord();wordStart=performance.now();
+  if(mode!=="race"){clearInterval(tick);
+    tick=setInterval(()=>{const e=(performance.now()-wordStart)/1000;$("t").textContent=(mode==="daily"?total+e:e).toFixed(1)},50)}
+  if(mode==="classic")tiles();
+}
+function finishWord(){
+  const t=(performance.now()-wordStart)/1000;
+  if(mode==="race"){score++;P.stats.words++;P.stats.themes[sel.theme]=1;addCoins(1);sfx("blip");nextWord();return}
+  clearInterval(tick);state="pause";$("inp").disabled=true;
+  if(mode==="daily"){
+    total+=t;idx++;sfx(idx>=DAILY?"record":"done");$("t").textContent=total.toFixed(1);
+    if(idx>=DAILY)return endDaily();
+    $("label").textContent=`📅 Daily Challenge · Word ${idx+1} of ${DAILY}`;
+    setTimeout(()=>{if(state==="pause"&&mode==="daily")nextWord()},400);return;
+  }
+  if(mode==="sentence"){
+    const wc=cur.split(" ").length,wpm=Math.round(wc/t*60);$("t").textContent=t.toFixed(1);
+    let m=`🎉 ${wc} words in ${t.toFixed(1)}s · ${wpm} words/min!`;let earn=5;P.stats.words+=wc;P.stats.sent++;
+    if(best.wpm==null||wpm>best.wpm){best.wpm=wpm;newKey="wpm";save();pushScore();m=`🌟 NEW RECORD! ${wpm} words/min! 🌟`;earn+=5;P.stats.records++}
+    sfx(earn>5?"record":"done");$("msg").textContent=m+" +"+earn+" 🪙";addCoins(earn);tiles();pause();return}
+  const n=String(cur.length);$("t").textContent=t.toFixed(1);
+  let m=`🎉 Great! ${t.toFixed(2)} seconds!`;let earn=2;P.stats.words++;P.stats.themes[sel.theme]=1;if(cur.length>=4&&t<2)P.stats.fast=1;
+  if(best[n]==null||t<best[n]){best[n]=t;newKey=n;save();pushScore();m=`🌟 NEW RECORD for ${n}-letter words: ${t.toFixed(2)}s! 🌟`;earn+=3;P.stats.records++}
+  sfx(earn>2?"record":"done");$("msg").textContent=m+" +"+earn+" 🪙";addCoins(earn);tiles();pause();
+}
+function pause(){
+  let left=5;
+  $("barWrap").classList.remove("hide");$("skip").classList.remove("hide");
+  const bar=$("bar");bar.style.transition="none";bar.style.width="100%";
+  void bar.offsetWidth;bar.style.transition="width 5s linear";bar.style.width="0%";
+  const s=()=>$("count").textContent=`Next word in ${left}... 😌 Take a breath!`;
+  s();clearInterval(pt);
+  pt=setInterval(()=>{left--;if(left<=0){clearInterval(pt);nextWord()}else s()},1000);
+}
+function endRace(){sfx("end");
+  stopAll();state="done";$("inp").disabled=true;$("t").textContent="0.0";
+  let m=`⏰ Time's up! You typed ${score} word${score===1?"":"s"}!`;
+  if(best.race==null||score>best.race){if(score>0){best.race=score;newKey="race";save();pushScore();m+=" 🌟 NEW RECORD! 🌟"}}
+  $("msg").textContent="";showResult(m);
+}
+function endDaily(){
+  stopAll();state="done";
+  P.stats.daily=1;let m=`📅 Done! Your total time: ${total.toFixed(2)} seconds!`;
+  const o=best.daily;
+  if(!o||o.d!==today()||total<o.t){best.daily={d:today(),t:total};newKey="daily";save();pushScore();m+=" 🌟 Best of the day! 🌟"}
+  $("msg").textContent="";showResult(m);
+}
+function showResult(m){const dc=mode==="daily"?20:0;addCoins(dc);$("resTxt").textContent=m+(dc?" +20 🪙":"");$("res").classList.remove("hide");
+  $("word").innerHTML="";$("barWrap").classList.add("hide");$("skip").classList.add("hide");$("count").textContent="";tiles();renderLB()}
+function goHome(){stopAll();state="idle";$("inp").disabled=true;pushScore();renderLB();tiles();show("home")}
+
+$("play").onclick=()=>{try{localStorage.setItem("wordzoomName",getName())}catch(e){}buildMenu();show("menu")};
+$("name").addEventListener("keydown",e=>{if(e.key==="Enter")closeProf()});
+$("name").addEventListener("input",()=>{try{localStorage.setItem("wordzoomName",getName())}catch(e){}renderChip()});
+$("pchip").onclick=openProf;$("pdone").onclick=closeProf;
+$("pmodal").addEventListener("click",e=>{if(e.target===$("pmodal"))closeProf()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("pmodal").classList.contains("hide"))closeProf()});
+$("menuBack").onclick=goHome;$("back").onclick=goHome;
+$("mClassic").onclick=()=>startMode("classic");
+$("mRace").onclick=()=>startMode("race");
+$("mDaily").onclick=()=>startMode("daily");
+$("mSent").onclick=()=>startMode("sentence");
+$("again").onclick=()=>startMode(mode);
+$("toMenu").onclick=()=>{stopAll();state="idle";buildMenu();show("menu")};
+$("skip").onclick=()=>{clearInterval(pt);nextWord()};
+$("inp").addEventListener("input",e=>{
+  if(state!=="play")return;
+  const v=e.target.value.toLowerCase();renderWord(v);
+  if(v===cur)finishWord();
+});
+$("reset").onclick=()=>{if(confirm("Erase your best scores?")){best={};save();newKey=null;tiles();pushScore()}};
+document.addEventListener("click",e=>{if(state==="play"&&e.target.tagName!=="BUTTON")$("inp").focus()});
+$("petBtn").onclick=()=>{renderPet();show("pet")};
+$("petHome").onclick=goHome;
+$("feed").onclick=()=>{if(P.coins<3){toast("Not enough coins yet! Keep playing 🪙");return}P.coins-=3;saveP();renderCoins();jumpPet(true)};
+$("stageBox").onclick=()=>jumpPet(false);
+$("swap").onclick=()=>{P.pet=null;saveP();renderPet()};
+$("petName").oninput=e=>{P.petName=e.target.value.slice(0,12);saveP()};
+tiles();renderTabs();renderLB();renderProf();initDb();
+try{if(!localStorage.getItem("wordzoomName"))openProf()}catch(e){}
+</script>
+</body>
+</html>
